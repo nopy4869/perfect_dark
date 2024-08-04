@@ -1245,7 +1245,8 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         rendering_state.depth_zfar = rsp.depth_zfar;
     }
 
-    bool depth_test = (rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER;
+    bool depth_test = ((rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER || (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM) &&
+                      ((rdp.other_mode_h & G_CYC_1CYCLE) == G_CYC_1CYCLE || (rdp.other_mode_h & G_CYC_2CYCLE) == G_CYC_2CYCLE);
     bool depth_update = (rdp.other_mode_l & Z_UPD) == Z_UPD;
     bool depth_compare = (rdp.other_mode_l & Z_CMP) == Z_CMP;
     bool depth_source_prim = (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM /* && gDP.primDepth.z == 1.0f */;
