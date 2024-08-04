@@ -3474,9 +3474,7 @@ void menuClose(void)
 	g_Menus[g_MpPlayerNum].openinhibit = 10;
 
 #ifndef PLATFORM_N64
-	if (inputMouseIsEnabled()) {
-		inputLockMouse(true);
-	}
+	inputAutoLockMouse(true);
 #endif
 
 	if (g_MenuData.root == MENUROOT_MPPAUSE) {
@@ -3587,9 +3585,7 @@ void menuPushRootDialog(struct menudialogdef *dialogdef, s32 root)
 	g_PlayersWithControl[g_Menus[g_MpPlayerNum].playernum] = false;
 
 #ifndef PLATFORM_N64
-	if (inputMouseIsEnabled()) {
-		inputLockMouse(false);
-	}
+	inputAutoLockMouse(false);
 #endif
 
 	func0f0f1494();
