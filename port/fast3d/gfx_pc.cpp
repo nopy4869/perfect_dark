@@ -2502,6 +2502,10 @@ static void gfx_run_dl(Gfx* cmd) {
             case G_RDPFLUSH_EXT:
                 gfx_flush();
                 break;
+            case G_CLEAR_DEPTH_EXT:
+                gfx_flush();
+                gfx_rapi->clear_framebuffer(false, true);
+                break;
             case G_RDPPIPESYNC:
             case G_RDPFULLSYNC:
             case G_RDPLOADSYNC:
@@ -2659,7 +2663,7 @@ extern "C" void gfx_run(Gfx* commands) {
     gfx_rapi->start_frame();
     gfx_rapi->start_draw_to_framebuffer(game_renders_to_framebuffer ? game_framebuffer : 0,
                                         (float)gfx_current_dimensions.height / SCREEN_HEIGHT);
-    gfx_rapi->clear_framebuffer();
+    gfx_rapi->clear_framebuffer(true, false);
     rdp.viewport_or_scissor_changed = true;
     rendering_state.viewport = {};
     rendering_state.scissor = {};
@@ -2669,7 +2673,7 @@ extern "C" void gfx_run(Gfx* commands) {
 
     if (game_renders_to_framebuffer) {
         gfx_rapi->start_draw_to_framebuffer(0, 1);
-        gfx_rapi->clear_framebuffer();
+        gfx_rapi->clear_framebuffer(true, true);
 
         if (gfx_msaa_level > 1) {
             bool different_size = gfx_current_dimensions.width != gfx_current_game_window_viewport.width ||
@@ -2732,7 +2736,7 @@ extern "C" void gfx_resize_framebuffer(int fb, uint32_t width, uint32_t height, 
 
 extern "C" void gfx_set_framebuffer(int fb, float noise_scale) {
     gfx_rapi->start_draw_to_framebuffer(fb, noise_scale);
-    gfx_rapi->clear_framebuffer();
+    gfx_rapi->clear_framebuffer(true, true);
 }
 
 extern "C" void gfx_copy_framebuffer(int fb_dst, int fb_src, int left, int top, int use_back) {
