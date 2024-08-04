@@ -125,7 +125,7 @@ static struct RSP {
     float aspect_ofs;
     float aspect_scale;
 
-    float depth_zfar;
+    //float depth_zfar;
 
     struct {
         // U0.16
@@ -198,7 +198,7 @@ static struct RDP {
 
 static struct RenderingState {
     uint8_t depth_mode;
-    float depth_zfar;
+    //float depth_zfar;
     bool alpha_blend;
     bool modulate;
     struct XYWidthHeight viewport, scissor;
@@ -1239,11 +1239,11 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         }
     }
 
-    if (rsp.depth_zfar != rendering_state.depth_zfar) {
-        gfx_flush();
-        gfx_rapi->set_depth_range(0.0f, rsp.depth_zfar);
-        rendering_state.depth_zfar = rsp.depth_zfar;
-    }
+    // if (rsp.depth_zfar != rendering_state.depth_zfar) {
+    //     gfx_flush();
+    //     gfx_rapi->set_depth_range(0.0f, rsp.depth_zfar);
+    //     rendering_state.depth_zfar = rsp.depth_zfar;
+    // }
 
     bool depth_test = ((rsp.geometry_mode & G_ZBUFFER) == G_ZBUFFER || (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM) &&
                       ((rdp.other_mode_h & G_CYC_1CYCLE) == G_CYC_1CYCLE || (rdp.other_mode_h & G_CYC_2CYCLE) == G_CYC_2CYCLE);
@@ -1735,13 +1735,13 @@ static void gfx_sp_moveword(uint8_t index, uint16_t offset, uintptr_t data) {
             // the default z range is around [100, 10000]
             // data is 2 / (znear + zfar) represented as a 0.16 fixed point
             // => (znear + zfar) = (2 / (data / 65536)) = 131072 / data
-            constexpr float full_range_mul = 1.f / 11000.f; // that's around the biggest value I got when testing
-            if (data == 0) {
-                rsp.depth_zfar = 1.f;
-            } else {
-                // sometimes this will overshoot 1 but GL can handle that
-                rsp.depth_zfar =((131072.f * full_range_mul) / (float)data);
-            }
+            // constexpr float full_range_mul = 1.f / 11000.f; // that's around the biggest value I got when testing
+            // if (data == 0) {
+            //     rsp.depth_zfar = 1.f;
+            // } else {
+            //     // sometimes this will overshoot 1 but GL can handle that
+            //     rsp.depth_zfar =((131072.f * full_range_mul) / (float)data);
+            // }
             break;
     }
 }
@@ -2556,7 +2556,7 @@ extern "C" void gfx_init(const GfxInitSettings *settings) {
         tex_upload_buffer = (uint8_t*)malloc(max_tex_size * max_tex_size * 4);
     }
 
-    rsp.depth_zfar = 1.0f;
+    //rsp.depth_zfar = 1.0f;
 
     rsp.lookat[0].dir[0] = rsp.lookat[1].dir[1] = 0x7F;
     rsp.current_lookat_coeffs[0][0] = rsp.current_lookat_coeffs[1][1] = 1.f;
