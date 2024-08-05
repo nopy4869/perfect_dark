@@ -242,138 +242,114 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     size_t num_floats = 4;
 
     // Vertex shader
+
 #ifdef __APPLE__
     append_line(vs_buf, &vs_len, "#version 410 core");
-    append_line(vs_buf, &vs_len, "in vec4 aVtxPos;");
+    append_line(vs_buf, &vs_len, "#define INPUT in");
+    append_line(vs_buf, &vs_len, "#define OUTPUT out");
 #else
     append_line(vs_buf, &vs_len, "#version 110");
-    append_line(vs_buf, &vs_len, "attribute vec4 aVtxPos;");
+    append_line(vs_buf, &vs_len, "#define INPUT attribute");
+    append_line(vs_buf, &vs_len, "#define OUTPUT varying");
 #endif
+
+    append_line(vs_buf, &vs_len, "INPUT vec4 aVtxPos;");
+
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-#ifdef __APPLE__
-            vs_len += sprintf(vs_buf + vs_len, "in vec2 aTexCoord%d;\n", i);
-            vs_len += sprintf(vs_buf + vs_len, "out vec2 vTexCoord%d;\n", i);
-#else
-            vs_len += sprintf(vs_buf + vs_len, "attribute vec2 aTexCoord%d;\n", i);
-            vs_len += sprintf(vs_buf + vs_len, "varying vec2 vTexCoord%d;\n", i);
-#endif
+            vs_len += sprintf(vs_buf + vs_len, "INPUT vec2 aTexCoord%d;\n", i);
+            vs_len += sprintf(vs_buf + vs_len, "OUTPUT vec2 vTexCoord%d;\n", i);
             num_floats += 2;
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-#ifdef __APPLE__
-                    vs_len += sprintf(vs_buf + vs_len, "in float aTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-                    vs_len += sprintf(vs_buf + vs_len, "out float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-#else
-                    vs_len += sprintf(vs_buf + vs_len, "attribute float aTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-                    vs_len += sprintf(vs_buf + vs_len, "varying float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-#endif
+                    vs_len += sprintf(vs_buf + vs_len, "INPUT float aTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
+                    vs_len += sprintf(vs_buf + vs_len, "OUTPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
                     num_floats += 1;
                 }
             }
         }
     }
     if (cc_features.opt_fog) {
-#ifdef __APPLE__
-        append_line(vs_buf, &vs_len, "in vec4 aFog;");
-        append_line(vs_buf, &vs_len, "out vec4 vFog;");
-#else
-        append_line(vs_buf, &vs_len, "attribute vec4 aFog;");
-        append_line(vs_buf, &vs_len, "varying vec4 vFog;");
-#endif
+        append_line(vs_buf, &vs_len, "INPUT vec4 aFog;");
+        append_line(vs_buf, &vs_len, "OUTPUT vec4 vFog;");
         num_floats += 4;
     }
 
     if (cc_features.opt_grayscale) {
-#ifdef __APPLE__
-        append_line(vs_buf, &vs_len, "in vec4 aGrayscaleColor;");
-        append_line(vs_buf, &vs_len, "out vec4 vGrayscaleColor;");
-#else
-        append_line(vs_buf, &vs_len, "attribute vec4 aGrayscaleColor;");
-        append_line(vs_buf, &vs_len, "varying vec4 vGrayscaleColor;");
-#endif
+        append_line(vs_buf, &vs_len, "INPUT vec4 aGrayscaleColor;");
+        append_line(vs_buf, &vs_len, "OUTPUT vec4 vGrayscaleColor;");
         num_floats += 4;
     }
 
     for (int i = 0; i < cc_features.num_inputs; i++) {
-#ifdef __APPLE__
-        vs_len += sprintf(vs_buf + vs_len, "in vec%d aInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-        vs_len += sprintf(vs_buf + vs_len, "out vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-#else
-        vs_len += sprintf(vs_buf + vs_len, "attribute vec%d aInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-        vs_len += sprintf(vs_buf + vs_len, "varying vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-#endif
+        vs_len += sprintf(vs_buf + vs_len, "INPUT vec%d aInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
+        vs_len += sprintf(vs_buf + vs_len, "OUTPUT vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
         num_floats += cc_features.opt_alpha ? 4 : 3;
     }
+
     append_line(vs_buf, &vs_len, "void main() {");
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-            vs_len += sprintf(vs_buf + vs_len, "vTexCoord%d = aTexCoord%d;\n", i, i);
+            vs_len += sprintf(vs_buf + vs_len, "    vTexCoord%d = aTexCoord%d;\n", i, i);
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-                    vs_len += sprintf(vs_buf + vs_len, "vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i,
+                    vs_len += sprintf(vs_buf + vs_len, "    vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i,
                                       j == 0 ? "S" : "T", i);
                 }
             }
         }
     }
     if (cc_features.opt_fog) {
-        append_line(vs_buf, &vs_len, "vFog = aFog;");
+        append_line(vs_buf, &vs_len, "    vFog = aFog;");
     }
     if (cc_features.opt_grayscale) {
-        append_line(vs_buf, &vs_len, "vGrayscaleColor = aGrayscaleColor;");
+        append_line(vs_buf, &vs_len, "    vGrayscaleColor = aGrayscaleColor;");
     }
     for (int i = 0; i < cc_features.num_inputs; i++) {
-        vs_len += sprintf(vs_buf + vs_len, "vInput%d = aInput%d;\n", i + 1, i + 1);
+        vs_len += sprintf(vs_buf + vs_len, "    vInput%d = aInput%d;\n", i + 1, i + 1);
     }
-    append_line(vs_buf, &vs_len, "gl_Position = aVtxPos;");
+    append_line(vs_buf, &vs_len, "    gl_Position = aVtxPos;");
     append_line(vs_buf, &vs_len, "}");
 
     // Fragment shader
+
 #ifdef __APPLE__
     append_line(fs_buf, &fs_len, "#version 410 core");
+    append_line(fs_buf, &fs_len, "#define INPUT in");
+    append_line(fs_buf, &fs_len, "#define OUTPUT_COLOR outColor");
+    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture(tex, uv)");
 #else
     append_line(fs_buf, &fs_len, "#version 130");
+    append_line(fs_buf, &fs_len, "#define INPUT varying");
+    append_line(fs_buf, &fs_len, "#define OUTPUT_COLOR gl_FragColor");
+    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture2D(tex, uv)");
 #endif
+
+    // Reference approach to color wrapping as per GLideN64
+    // Return wrapped value of x in interval [low, high)
+    append_line(fs_buf, &fs_len, "#define WRAP(x, low, high) mod((x)-(low), (high)-(low)) + (low)");
+
+    append_line(fs_buf, &fs_len, "#define TEX_OFFSET(tex, uv, texSize, off) SAMPLE_TEX(tex, uv - (off)/texSize)");
+
     // append_line(fs_buf, &fs_len, "precision mediump float;");
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-#ifdef __APPLE__
-            fs_len += sprintf(fs_buf + fs_len, "in vec2 vTexCoord%d;\n", i);
-#else
-            fs_len += sprintf(fs_buf + fs_len, "varying vec2 vTexCoord%d;\n", i);
-#endif
+            fs_len += sprintf(fs_buf + fs_len, "INPUT vec2 vTexCoord%d;\n", i);
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-#ifdef __APPLE__
-                    fs_len += sprintf(fs_buf + fs_len, "in float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-#else
-                    fs_len += sprintf(fs_buf + fs_len, "varying float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-#endif
+                    fs_len += sprintf(fs_buf + fs_len, "INPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
                 }
             }
         }
     }
     if (cc_features.opt_fog) {
-#ifdef __APPLE__
-        append_line(fs_buf, &fs_len, "in vec4 vFog;");
-#else
-        append_line(fs_buf, &fs_len, "varying vec4 vFog;");
-#endif
+        append_line(fs_buf, &fs_len, "INPUT vec4 vFog;");
     }
     if (cc_features.opt_grayscale) {
-#ifdef __APPLE__
-        append_line(fs_buf, &fs_len, "in vec4 vGrayscaleColor;");
-#else
-        append_line(fs_buf, &fs_len, "varying vec4 vGrayscaleColor;");
-#endif
+        append_line(fs_buf, &fs_len, "INPUT vec4 vGrayscaleColor;");
     }
     for (int i = 0; i < cc_features.num_inputs; i++) {
-#ifdef __APPLE__
-        fs_len += sprintf(fs_buf + fs_len, "in vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-#else
-        fs_len += sprintf(fs_buf + fs_len, "varying vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-#endif
+        fs_len += sprintf(fs_buf + fs_len, "INPUT vec%d vInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
     }
     if (cc_features.used_textures[0]) {
         append_line(fs_buf, &fs_len, "uniform sampler2D uTex0;");
@@ -394,20 +370,13 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     append_line(fs_buf, &fs_len, "    return fract(sin(random) * 143758.5453);");
     append_line(fs_buf, &fs_len, "}");
 
-#if __APPLE__
-    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture(tex, uv)");
-#else
-    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture2D(tex, uv)");
-#endif
-
     if (current_filter_mode == FILTER_THREE_POINT) {
-        append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) SAMPLE_TEX(tex, texCoord - (off)/texSize)");
         append_line(fs_buf, &fs_len, "vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {");
         append_line(fs_buf, &fs_len, "    vec2 offset = fract(texCoord*texSize - vec2(0.5));");
         append_line(fs_buf, &fs_len, "    offset -= step(1.0, offset.x + offset.y);");
-        append_line(fs_buf, &fs_len, "    vec4 c0 = TEX_OFFSET(offset);");
-        append_line(fs_buf, &fs_len, "    vec4 c1 = TEX_OFFSET(vec2(offset.x - sign(offset.x), offset.y));");
-        append_line(fs_buf, &fs_len, "    vec4 c2 = TEX_OFFSET(vec2(offset.x, offset.y - sign(offset.y)));");
+        append_line(fs_buf, &fs_len, "    vec4 c0 = TEX_OFFSET(tex, texCoord, texSize, offset);");
+        append_line(fs_buf, &fs_len, "    vec4 c1 = TEX_OFFSET(tex, texCoord, texSize, vec2(offset.x - sign(offset.x), offset.y));");
+        append_line(fs_buf, &fs_len, "    vec4 c2 = TEX_OFFSET(tex, texCoord, texSize, vec2(offset.x, offset.y - sign(offset.y)));");
         append_line(fs_buf, &fs_len, "    return c0 + abs(offset.x)*(c1-c0) + abs(offset.y)*(c2-c0);");
         append_line(fs_buf, &fs_len, "}");
     }
@@ -455,47 +424,43 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 
     append_line(fs_buf, &fs_len, "void main() {");
 
-    // Reference approach to color wrapping as per GLideN64
-    // Return wrapped value of x in interval [low, high)
-    append_line(fs_buf, &fs_len, "#define WRAP(x, low, high) mod((x)-(low), (high)-(low)) + (low)");
-
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
             bool s = cc_features.clamp[i][0], t = cc_features.clamp[i][1];
 
-            fs_len += sprintf(fs_buf + fs_len, "vec2 texSize%d = textureSize(uTex%d, 0);\n", i, i);
+            fs_len += sprintf(fs_buf + fs_len, "    vec2 texSize%d = textureSize(uTex%d, 0);\n", i, i);
 
             if (!s && !t) {
-                fs_len += sprintf(fs_buf + fs_len, "vec2 vTexCoordAdj%d = vTexCoord%d;\n", i, i);
+                fs_len += sprintf(fs_buf + fs_len, "    vec2 vTexCoordAdj%d = vTexCoord%d;\n", i, i);
             } else {
                 if (s && t) {
                     fs_len += sprintf(fs_buf + fs_len,
-                                      "vec2 vTexCoordAdj%d = clamp(vTexCoord%d, 0.5 / texSize%d, "
+                                      "    vec2 vTexCoordAdj%d = clamp(vTexCoord%d, 0.5 / texSize%d, "
                                       "vec2(vTexClampS%d, vTexClampT%d));\n",
                                       i, i, i, i, i);
                 } else if (s) {
                     fs_len += sprintf(fs_buf + fs_len,
-                                      "vec2 vTexCoordAdj%d = vec2(clamp(vTexCoord%d.s, 0.5 / "
+                                      "    vec2 vTexCoordAdj%d = vec2(clamp(vTexCoord%d.s, 0.5 / "
                                       "texSize%d.s, vTexClampS%d), vTexCoord%d.t);\n",
                                       i, i, i, i, i);
                 } else {
                     fs_len += sprintf(fs_buf + fs_len,
-                                      "vec2 vTexCoordAdj%d = vec2(vTexCoord%d.s, clamp(vTexCoord%d.t, "
+                                      "    vec2 vTexCoordAdj%d = vec2(vTexCoord%d.s, clamp(vTexCoord%d.t, "
                                       "0.5 / texSize%d.t, vTexClampT%d));\n",
                                       i, i, i, i, i);
                 }
             }
 
             if (current_filter_mode == FILTER_THREE_POINT)
-                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
+                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
             else
-                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d);\n", i, i, i, i);
+                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d);\n", i, i, i, i);
         }
     }
 
-    append_line(fs_buf, &fs_len, cc_features.opt_alpha ? "vec4 texel;" : "vec3 texel;");
+    append_line(fs_buf, &fs_len, cc_features.opt_alpha ? "    vec4 texel;" : "    vec3 texel;");
     for (int c = 0; c < (cc_features.opt_2cyc ? 2 : 1); c++) {
-        append_str(fs_buf, &fs_len, "texel = ");
+        append_str(fs_buf, &fs_len, "    texel = ");
         if (!cc_features.color_alpha_same[c] && cc_features.opt_alpha) {
             append_str(fs_buf, &fs_len, "vec4(");
             append_formula(fs_buf, &fs_len, cc_features.c[c], cc_features.do_single[c][0],
@@ -512,55 +477,48 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, ";");
 
         if (c == 0) {
-            append_line(fs_buf, &fs_len, "texel = WRAP(texel, -1.01, 1.01);");
+            append_line(fs_buf, &fs_len, "    texel = WRAP(texel, -1.01, 1.01);");
         }
     }
 
-    append_line(fs_buf, &fs_len, "texel = WRAP(texel, -0.51, 1.51);");
-    append_line(fs_buf, &fs_len, "texel = clamp(texel, 0.0, 1.0);");
+    append_line(fs_buf, &fs_len, "    texel = WRAP(texel, -0.51, 1.51);");
+    append_line(fs_buf, &fs_len, "    texel = clamp(texel, 0.0, 1.0);");
     // TODO discard if alpha is 0?
     if (cc_features.opt_fog) {
         if (cc_features.opt_alpha) {
-            append_line(fs_buf, &fs_len, "texel = vec4(mix(texel.rgb, vFog.rgb, vFog.a), texel.a);");
+            append_line(fs_buf, &fs_len, "    texel = vec4(mix(texel.rgb, vFog.rgb, vFog.a), texel.a);");
         } else {
-            append_line(fs_buf, &fs_len, "texel = mix(texel, vFog.rgb, vFog.a);");
+            append_line(fs_buf, &fs_len, "    texel = mix(texel, vFog.rgb, vFog.a);");
         }
     }
 
     if (cc_features.opt_texture_edge && cc_features.opt_alpha) {
-        append_line(fs_buf, &fs_len, "if (texel.a > 0.19) texel.a = 1.0; else discard;");
+        append_line(fs_buf, &fs_len, "    if (texel.a > 0.19) texel.a = 1.0; else discard;");
     }
 
     if (cc_features.opt_alpha && cc_features.opt_noise) {
         append_line(fs_buf, &fs_len,
-                    "texel.a *= floor(clamp(random(vec3(floor(gl_FragCoord.xy * noise_scale), float(frame_count))) + "
+                    "    texel.a *= floor(clamp(random(vec3(floor(gl_FragCoord.xy * noise_scale), float(frame_count))) + "
                     "texel.a, 0.0, 1.0));");
     }
 
     if (cc_features.opt_grayscale) {
-        append_line(fs_buf, &fs_len, "float intensity = (texel.r + texel.g + texel.b) / 3.0;");
-        append_line(fs_buf, &fs_len, "vec3 new_texel = vGrayscaleColor.rgb * intensity;");
-        append_line(fs_buf, &fs_len, "texel.rgb = mix(texel.rgb, new_texel, vGrayscaleColor.a);");
+        append_line(fs_buf, &fs_len, "    float intensity = (texel.r + texel.g + texel.b) / 3.0;");
+        append_line(fs_buf, &fs_len, "    vec3 new_texel = vGrayscaleColor.rgb * intensity;");
+        append_line(fs_buf, &fs_len, "    texel.rgb = mix(texel.rgb, new_texel, vGrayscaleColor.a);");
     }
 
     if (cc_features.opt_alpha) {
         if (cc_features.opt_alpha_threshold) {
-            append_line(fs_buf, &fs_len, "if (texel.a < 8.0 / 256.0) discard;");
+            append_line(fs_buf, &fs_len, "    if (texel.a < 8.0 / 256.0) discard;");
         }
         if (cc_features.opt_invisible) {
-            append_line(fs_buf, &fs_len, "texel.a = 0.0;");
+            append_line(fs_buf, &fs_len, "    texel.a = 0.0;");
         }
-#if __APPLE__
-        append_line(fs_buf, &fs_len, "outColor = texel;");
-#else
-        append_line(fs_buf, &fs_len, "gl_FragColor = texel;");
-#endif
+
+        append_line(fs_buf, &fs_len, "    OUTPUT_COLOR = texel;");
     } else {
-#if __APPLE__
-        append_line(fs_buf, &fs_len, "outColor = vec4(texel, 1.0);");
-#else
-        append_line(fs_buf, &fs_len, "gl_FragColor = vec4(texel, 1.0);");
-#endif
+        append_line(fs_buf, &fs_len, "    OUTPUT_COLOR = vec4(texel, 1.0);");
     }
     append_line(fs_buf, &fs_len, "}");
 
