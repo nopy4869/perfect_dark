@@ -2705,6 +2705,18 @@ extern "C" void gfx_set_target_fps(int fps) {
     gfx_wapi->set_target_fps(fps);
 }
 
+extern "C" void gfx_set_texture_filter(enum FilteringMode mode) {
+    gfx_texture_cache_clear();
+    if (rendering_state.shader_program) {
+        gfx_rapi->unload_shader(rendering_state.shader_program);
+        rendering_state.shader_program = nullptr;
+    }
+    gfx_rapi->clear_shaders();
+    color_combiner_pool.clear();
+    prev_combiner = color_combiner_pool.end();
+    gfx_rapi->set_texture_filter(mode);
+}
+
 extern "C" int gfx_create_framebuffer(uint32_t width, uint32_t height, int upscale, int autoresize) {
     int fb = gfx_rapi->create_framebuffer();
     gfx_resize_framebuffer(fb, width, height, upscale, autoresize);

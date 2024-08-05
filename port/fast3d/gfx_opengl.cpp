@@ -97,10 +97,10 @@ static void gfx_opengl_set_uniforms(struct ShaderProgram* prg) {
         glUniform1f(prg->noise_scale_location, current_noise_scale);
     }
     if (prg->three_point_filter_locations[0] >= 0) {
-        glUniform1i(prg->three_point_filter_locations[0], current_filter_mode == FILTER_THREE_POINT && current_linear_filters[0]);
+        glUniform1i(prg->three_point_filter_locations[0], current_linear_filters[0]);
     }
     if (prg->three_point_filter_locations[1] >= 0) {
-        glUniform1i(prg->three_point_filter_locations[1], current_filter_mode == FILTER_THREE_POINT && current_linear_filters[1]);
+        glUniform1i(prg->three_point_filter_locations[1], current_linear_filters[1]);
     }
 }
 
@@ -377,11 +377,13 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     }
     if (cc_features.used_textures[0]) {
         append_line(fs_buf, &fs_len, "uniform sampler2D uTex0;");
-        append_line(fs_buf, &fs_len, "uniform int three_point_filter0;");
+        if (current_filter_mode == FILTER_THREE_POINT)
+            append_line(fs_buf, &fs_len, "uniform int three_point_filter0;");
     }
     if (cc_features.used_textures[1]) {
         append_line(fs_buf, &fs_len, "uniform sampler2D uTex1;");
-        append_line(fs_buf, &fs_len, "uniform int three_point_filter1;");
+        if (current_filter_mode == FILTER_THREE_POINT)
+            append_line(fs_buf, &fs_len, "uniform int three_point_filter1;");
     }
 
     append_line(fs_buf, &fs_len, "uniform int frame_count;");
@@ -407,7 +409,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
                 return vec4(cw.rgb / cw.a, 1.0);
             })"
         );
-    } else {
+    } else if (current_filter_mode == FILTER_THREE_POINT) {
 #if __APPLE__
         append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) texture(tex, texCoord - (off)/texSize)");
 #else
@@ -426,6 +428,14 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "    return three_point_filter == 1 ? filter3point(tex, uv, texSize) : texture(tex, uv);");
 #else
         append_line(fs_buf, &fs_len, "    return three_point_filter == 1 ? filter3point(tex, uv, texSize) : texture2D(tex, uv);");
+#endif
+        append_line(fs_buf, &fs_len, "}");
+    } else {
+        append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
+#if __APPLE__
+        append_line(fs_buf, &fs_len, "    return texture(tex, uv);");
+#else
+        append_line(fs_buf, &fs_len, "    return texture2D(tex, uv);");
 #endif
         append_line(fs_buf, &fs_len, "}");
     }
@@ -467,7 +477,10 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
                 }
             }
 
-            fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
+            if (current_filter_mode == FILTER_THREE_POINT)
+                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
+            else
+                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, 0);\n", i, i, i, i);
         }
     }
 
@@ -580,6 +593,9 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     glAttachShader(shader_program, fragment_shader);
     glLinkProgram(shader_program);
 
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
     size_t cnt = 0;
 
     struct ShaderProgram* prg = &shader_program_pool[make_pair(shader_id0, shader_id1)];
@@ -663,6 +679,14 @@ static void gfx_opengl_shader_get_info(struct ShaderProgram* prg, uint8_t* num_i
     *num_inputs = prg->num_inputs;
     used_textures[0] = prg->used_textures[0];
     used_textures[1] = prg->used_textures[1];
+}
+
+static void gfx_opengl_clear_shaders(void) {
+    glUseProgram(0);
+    for (auto& pair : shader_program_pool) {
+        glDeleteProgram(pair.second.opengl_program_id);
+    }
+    shader_program_pool.clear();
 }
 
 static GLuint gfx_opengl_new_texture(void) {
@@ -1177,7 +1201,6 @@ void gfx_opengl_copy_framebuffer(int fb_dst, int fb_src, int left, int top, bool
 
 void gfx_opengl_set_texture_filter(FilteringMode mode) {
     current_filter_mode = mode;
-    gfx_texture_cache_clear();
 }
 
 FilteringMode gfx_opengl_get_texture_filter(void) {
@@ -1193,6 +1216,7 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_create_and_load_new_shader,
     gfx_opengl_lookup_shader,
     gfx_opengl_shader_get_info,
+    gfx_opengl_clear_shaders,
     gfx_opengl_new_texture,
     gfx_opengl_select_texture,
     gfx_opengl_upload_texture,
