@@ -1065,12 +1065,23 @@ bool gfx_opengl_start_draw_to_framebuffer(int fb_id, float noise_scale) {
     }
 }
 
-void gfx_opengl_clear_framebuffer() {
+void gfx_opengl_clear_framebuffer(bool clear_color, bool clear_depth) {
     glDisable(GL_SCISSOR_TEST);
-    glDepthMask(GL_TRUE);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDepthMask(current_depth_mask ? GL_TRUE : GL_FALSE);
+    
+    GLbitfield mask = 0;
+    if (clear_color) {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        mask |= GL_COLOR_BUFFER_BIT;
+    }
+    if (clear_depth) {
+        glDepthMask(GL_TRUE);
+        mask |= GL_DEPTH_BUFFER_BIT;
+    }
+    glClear(mask);
+    if (clear_depth) {
+        glDepthMask(current_depth_mask ? GL_TRUE : GL_FALSE);
+    }
+
     glEnable(GL_SCISSOR_TEST);
 }
 
