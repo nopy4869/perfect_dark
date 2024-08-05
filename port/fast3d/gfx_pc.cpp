@@ -522,7 +522,7 @@ static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     TextureCacheNode** n = &rendering_state.textures[i];
 
     if (it != gfx_texture_cache.map.end()) {
-        gfx_rapi->select_texture(i, it->second.texture_id);
+        gfx_rapi->select_texture(i, it->second.texture_id, it->second.linear_filter);
         *n = &*it;
         gfx_texture_cache.lru.splice(gfx_texture_cache.lru.end(), gfx_texture_cache.lru,
                                      it->second.lru_location); // move to back
@@ -550,7 +550,7 @@ static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     node->second.texture_id = texture_id;
     node->second.lru_location = gfx_texture_cache.lru.insert(gfx_texture_cache.lru.end(), { it });
 
-    gfx_rapi->select_texture(i, texture_id);
+    gfx_rapi->select_texture(i, texture_id, false);
     gfx_rapi->set_sampler_parameters(i, false, 0, 0);
     *n = node;
     return false;
