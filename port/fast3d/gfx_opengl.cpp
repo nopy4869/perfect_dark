@@ -55,7 +55,7 @@ static std::vector<Framebuffer> framebuffers;
 static size_t current_framebuffer;
 static float current_noise_scale;
 static FilteringMode current_filter_mode = FILTER_LINEAR;
-static bool current_linear_filters[2] = {false, false};
+static bool current_textures_linear_filter[2] = {false, false};
 
 static GLenum gl_mirror_clamp = GL_MIRROR_CLAMP_TO_EDGE;
 
@@ -97,10 +97,10 @@ static void gfx_opengl_set_uniforms(struct ShaderProgram* prg) {
         glUniform1f(prg->noise_scale_location, current_noise_scale);
     }
     if (prg->three_point_filter_locations[0] >= 0) {
-        glUniform1i(prg->three_point_filter_locations[0], current_linear_filters[0]);
+        glUniform1i(prg->three_point_filter_locations[0], current_textures_linear_filter[0]);
     }
     if (prg->three_point_filter_locations[1] >= 0) {
-        glUniform1i(prg->three_point_filter_locations[1], current_linear_filters[1]);
+        glUniform1i(prg->three_point_filter_locations[1], current_textures_linear_filter[1]);
     }
 }
 
@@ -394,27 +394,14 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     append_line(fs_buf, &fs_len, "    return fract(sin(random) * 143758.5453);");
     append_line(fs_buf, &fs_len, "}");
 
-    if (cc_features.opt_blur) {
-        // blur filter, used for menu backgrounds
-        // used to be two for loops from 0 to 4, but apparently intel drivers crashed trying to unroll it
-        // used to have a const weight array, but apparently drivers for the GT620 don't like const array initializers
-        append_line(fs_buf, &fs_len, R"(
-            lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 tsize, in int three_point_filter) {
-                lowp vec4 cw = vec4(0.0);
-                for (int i = 0; i < 16; ++i) {
-                    vec2 xy = vec2(float(i & 3), float(i >> 2));
-                    lowp float w = 0.009947 - length(xy) * 0.001;
-                    cw += vec4(texture2D(t, uv + (vec2(-1.5) + xy) / tsize).rgb * w, w);
-                }
-                return vec4(cw.rgb / cw.a, 1.0);
-            })"
-        );
-    } else if (current_filter_mode == FILTER_THREE_POINT) {
 #if __APPLE__
-        append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) texture(tex, texCoord - (off)/texSize)");
+    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture(tex, uv)");
 #else
-        append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) texture2D(tex, texCoord - (off)/texSize)");
+    append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture2D(tex, uv)");
 #endif
+
+    if (current_filter_mode == FILTER_THREE_POINT) {
+        append_line(fs_buf, &fs_len, "#define TEX_OFFSET(off) SAMPLE_TEX(tex, texCoord - (off)/texSize)");
         append_line(fs_buf, &fs_len, "vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {");
         append_line(fs_buf, &fs_len, "    vec2 offset = fract(texCoord*texSize - vec2(0.5));");
         append_line(fs_buf, &fs_len, "    offset -= step(1.0, offset.x + offset.y);");
@@ -423,21 +410,43 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "    vec4 c2 = TEX_OFFSET(vec2(offset.x, offset.y - sign(offset.y)));");
         append_line(fs_buf, &fs_len, "    return c0 + abs(offset.x)*(c1-c0) + abs(offset.y)*(c2-c0);");
         append_line(fs_buf, &fs_len, "}");
-        append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
-#if __APPLE__
-        append_line(fs_buf, &fs_len, "    return three_point_filter == 1 ? filter3point(tex, uv, texSize) : texture(tex, uv);");
-#else
-        append_line(fs_buf, &fs_len, "    return three_point_filter == 1 ? filter3point(tex, uv, texSize) : texture2D(tex, uv);");
-#endif
+    }
+
+    if (cc_features.opt_blur) {
+        // blur filter, used for menu backgrounds
+        // used to be two for loops from 0 to 4, but apparently intel drivers crashed trying to unroll it
+        // used to have a const weight array, but apparently drivers for the GT620 don't like const array initializers
+
+        if (current_filter_mode == FILTER_THREE_POINT)
+            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
+        else
+            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize) {");
+
+        append_line(fs_buf, &fs_len, "    lowp vec4 cw = vec4(0.0);");
+        append_line(fs_buf, &fs_len, "    for (int i = 0; i < 16; ++i) {");
+        append_line(fs_buf, &fs_len, "        vec2 xy = vec2(float(i & 3), float(i >> 2));");
+        append_line(fs_buf, &fs_len, "        lowp float w = 0.009947 - length(xy) * 0.001;");
+        append_line(fs_buf, &fs_len, "        vec2 scaled_uv = uv + (vec2(-1.5) + xy) / texSize;");
+
+        if (current_filter_mode == FILTER_THREE_POINT)
+            append_line(fs_buf, &fs_len, "        lowp vec4 tex = mix(SAMPLE_TEX(t, scaled_uv), filter3point(t, scaled_uv, texSize), three_point_filter);");
+        else
+            append_line(fs_buf, &fs_len, "        lowp vec4 tex = SAMPLE_TEX(t, scaled_uv);");
+
+        append_line(fs_buf, &fs_len, "        cw += vec4(tex.rgb * w, w);");
+        append_line(fs_buf, &fs_len, "    }");
+        append_line(fs_buf, &fs_len, "    return vec4(cw.rgb / cw.a, 1.0);");
         append_line(fs_buf, &fs_len, "}");
     } else {
-        append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
-#if __APPLE__
-        append_line(fs_buf, &fs_len, "    return texture(tex, uv);");
-#else
-        append_line(fs_buf, &fs_len, "    return texture2D(tex, uv);");
-#endif
-        append_line(fs_buf, &fs_len, "}");
+        if (current_filter_mode == FILTER_THREE_POINT) {
+            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
+            append_line(fs_buf, &fs_len, "    return mix(SAMPLE_TEX(tex, uv), filter3point(tex, uv, texSize), three_point_filter);");
+            append_line(fs_buf, &fs_len, "}");
+        } else {
+            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize) {");
+            append_line(fs_buf, &fs_len, "    return SAMPLE_TEX(tex, uv);");
+            append_line(fs_buf, &fs_len, "}");
+        }
     }
 
 #if __APPLE__
@@ -480,7 +489,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
             if (current_filter_mode == FILTER_THREE_POINT)
                 fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
             else
-                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, 0);\n", i, i, i, i);
+                fs_len += sprintf(fs_buf + fs_len, "vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d);\n", i, i, i, i);
         }
     }
 
@@ -503,12 +512,12 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, ";");
 
         if (c == 0) {
-            append_str(fs_buf, &fs_len, "texel = WRAP(texel, -1.01, 1.01);");
+            append_line(fs_buf, &fs_len, "texel = WRAP(texel, -1.01, 1.01);");
         }
     }
 
-    append_str(fs_buf, &fs_len, "texel = WRAP(texel, -0.51, 1.51);");
-    append_str(fs_buf, &fs_len, "texel = clamp(texel, 0.0, 1.0);");
+    append_line(fs_buf, &fs_len, "texel = WRAP(texel, -0.51, 1.51);");
+    append_line(fs_buf, &fs_len, "texel = clamp(texel, 0.0, 1.0);");
     // TODO discard if alpha is 0?
     if (cc_features.opt_fog) {
         if (cc_features.opt_alpha) {
@@ -593,6 +602,8 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     glAttachShader(shader_program, fragment_shader);
     glLinkProgram(shader_program);
 
+    glDetachShader(shader_program, vertex_shader);
+    glDetachShader(shader_program, fragment_shader);
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
@@ -703,7 +714,7 @@ static void gfx_opengl_select_texture(int tile, GLuint texture_id, bool linear_f
     glActiveTexture(GL_TEXTURE0 + tile);
     glBindTexture(GL_TEXTURE_2D, texture_id);
 
-    current_linear_filters[tile] = linear_filter;
+    current_textures_linear_filter[tile] = linear_filter;
 }
 
 static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, uint32_t width, uint32_t height) {
@@ -1143,6 +1154,8 @@ void gfx_opengl_select_texture_fb(int fb_id) {
     // glDisable(GL_DEPTH_TEST);
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, framebuffers[fb_id].clrbuf);
+
+    current_textures_linear_filter[0] = true;
 }
 
 void gfx_opengl_copy_framebuffer(int fb_dst, int fb_src, int left, int top, bool flip_y, bool use_back) {
