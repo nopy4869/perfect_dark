@@ -1535,19 +1535,7 @@ MenuDialogHandlerResult ciCharacterProfileMenuDialog(s32 operation, struct menud
 	f32 y;
 	f32 scale;
 
-	switch (operation) {
-	case MENUOP_OPEN:
-		if (bodynum == BODY_DRCAROLL) {
-			scale = 0.7f;
-			g_Menus[g_MpPlayerNum].menumodel.zoom = -1;
-		} else {
-			g_Menus[g_MpPlayerNum].menumodel.zoom = 30;
-			scale = 1.0f;
-		}
-
-		g_Menus[g_MpPlayerNum].menumodel.zoomtimer60 = TICKS(120);
-		g_Menus[g_MpPlayerNum].menumodel.removingpiece = false;
-
+#ifndef PLATFORM_N64
 #if VERSION == VERSION_PAL_FINAL
 		if (g_ViRes != VIRES_HI) {
 			x = -117;
@@ -1574,6 +1562,50 @@ MenuDialogHandlerResult ciCharacterProfileMenuDialog(s32 operation, struct menud
 		if (optionsGetScreenRatio() == SCREENRATIO_16_9) {
 			x = -100;
 		}
+#endif
+#endif
+
+	switch (operation) {
+	case MENUOP_OPEN:
+		if (bodynum == BODY_DRCAROLL) {
+			scale = 0.7f;
+			g_Menus[g_MpPlayerNum].menumodel.zoom = -1;
+		} else {
+			g_Menus[g_MpPlayerNum].menumodel.zoom = 30;
+			scale = 1.0f;
+		}
+
+		g_Menus[g_MpPlayerNum].menumodel.zoomtimer60 = TICKS(120);
+		g_Menus[g_MpPlayerNum].menumodel.removingpiece = false;
+
+#ifdef PLATFORM_N64
+#if VERSION == VERSION_PAL_FINAL
+		if (g_ViRes != VIRES_HI) {
+			x = -117;
+
+			if (optionsGetScreenRatio() == SCREENRATIO_16_9) {
+				x = -87;
+			}
+		} else {
+			x = -177;
+
+			if (optionsGetScreenRatio() == SCREENRATIO_16_9) {
+				x = -127;
+			}
+		}
+#elif VERSION == VERSION_PAL_BETA
+		x = -117;
+
+		if (optionsGetScreenRatio() == SCREENRATIO_16_9) {
+			x = -87;
+		}
+#else
+		x = -130;
+
+		if (optionsGetScreenRatio() == SCREENRATIO_16_9) {
+			x = -100;
+		}
+#endif
 #endif
 
 		y = -15;
@@ -1603,6 +1635,11 @@ MenuDialogHandlerResult ciCharacterProfileMenuDialog(s32 operation, struct menud
 	case MENUOP_CLOSE:
 		break;
 	case MENUOP_TICK:
+#ifndef PLATFORM_N64
+		x = (float)x * ((f32)SCREEN_WIDTH_LO / (f32)SCREEN_HEIGHT_LO) / videoGetAspect();
+		g_Menus[g_MpPlayerNum].menumodel.newposx = x;
+#endif
+
 		if (bodynum == BODY_DRCAROLL) {
 			static struct modelpartvisibility vis[] = {
 				{ MODELPART_DRCAROLL_0001, false },
