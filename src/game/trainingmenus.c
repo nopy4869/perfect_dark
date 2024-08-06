@@ -1926,11 +1926,6 @@ MenuDialogHandlerResult dtTrainingDetailsMenuDialog(s32 operation, struct menudi
 #endif
 #endif
 
-#ifndef PLATFORM_N64
-			g_Menus[g_MpPlayerNum].menumodel.newposx *= ((f32)SCREEN_WIDTH_LO / (f32)SCREEN_HEIGHT_LO) / videoGetAspect();
-			g_Menus[g_MpPlayerNum].menumodel.curposx = g_Menus[g_MpPlayerNum].menumodel.newposx;
-#endif
-
 			g_Menus[g_MpPlayerNum].menumodel.newscale /= 2.5f;
 		}
 		break;
