@@ -90,13 +90,13 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         name: pd-i686-linux
-        path: bin/
-    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-      with:
-        build-bundle: true
-        bundle: io.github.fgsfdsfgs.perfect_dark.flatpak
-        manifest-path: dist/linux/io.github.fgsfdsfgs.perfect_dark.yml
-        cache-key: flatpak-builder-${{ github.sha }}
+        path: dist/linux/bin/
+    - name: Build Flatpak bundle
+      run: |
+        cd dist/linux/
+        flatpak-builder build --force-clean io.github.fgsfdsfgs.perfect_dark.yml
+        flatpak build-export export build
+        flatpak build-bundle export io.github.fgsfdsfgs.perfect_dark.flatpak io.github.fgsfdsfgs.perfect_dark
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
