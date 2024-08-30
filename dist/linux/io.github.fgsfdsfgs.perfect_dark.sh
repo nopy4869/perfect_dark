@@ -3,21 +3,33 @@
 # Create user data directories if necessary
 userdirs=( roms saves mods )
 for path in "${userdirs[@]}"; do
-    if [[ ! -d "${XDG_DATA_HOME}/${path}" ]]; then
+    if [ ! -d "${XDG_DATA_HOME}/${path}" ]; then
         mkdir -p "${XDG_DATA_HOME}/${path}"
     fi
 done
 
-# If first parameter is one of the pd executables, execute that
-# and pass the remaining parameters to it; otherwise default to
-# pd and pass all arguments to it
+# Default to pd as executable but switch to jpn/pal if the NTSC rom
+# is missing but JPN/PAL are present.
+executable="pd"
+if [ -f ${XDG_DATA_HOME}/roms/pd.ntsc-final.z64 ] | \
+   [ -f ${XDG_DATA_HOME}/roms/pd.ntsc-1.0.z64 ]; then
+    executable="pd"
+elif [ -f ${XDG_DATA_HOME}/roms/pd.jpn-final.z64 ]; then
+    executable="pd.jpn"
+elif [ -f ${XDG_DATA_HOME}/roms/pd.pal-final.z64 ]; then
+    executable="pd.pal"
+fi
+
+# If first parameter passed to this script is one of the pd executables,
+# run that regardless of ROM auto-detection above and pass the remaining
+# parameters to it; otherwise pass all arguments to the executable selected
+# above
 case $1 in
     "pd."*)
         executable=$1
         params="${@:2}"
         ;;
     *)
-        executable=pd
         params="$@"
         ;;
 esac
