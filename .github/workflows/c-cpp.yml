@@ -94,7 +94,9 @@ jobs:
     - name: Build Flatpak bundle
       run: |
         cd dist/linux/
-        flatpak-builder build --force-clean io.github.fgsfdsfgs.perfect_dark.yml
+        ls -la
+        pwd
+        flatpak-builder build --force-clean ./io.github.fgsfdsfgs.perfect_dark.yml
         flatpak build-export export build
         flatpak build-bundle export io.github.fgsfdsfgs.perfect_dark.flatpak io.github.fgsfdsfgs.perfect_dark
     - name: Upload artifact
