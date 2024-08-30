@@ -101,3 +101,23 @@ jobs:
           git tag --force ci-dev-build port
           git push --force origin ci-dev-build
           gh release upload --clobber ci-dev-build ci-release/*
+
+  build-flatpak-bundle:
+    name: "Build flatpak bundle"
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-44
+      options: --privileged
+    steps:
+    - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pd-i686-linux
+          path: bin/
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        build-bundle: true
+        bundle: io.github.fgsfdsfgs.perfect_dark.flatpak
+        manifest-path: dist/linux/io.github.fgsfdsfgs.perfect_dark.yml
+        cache-key: flatpak-builder-${{ github.sha }}
+        upload-artifact: true
