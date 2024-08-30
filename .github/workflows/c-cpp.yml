@@ -91,14 +91,21 @@ jobs:
       with:
         name: pd-i686-linux
         path: dist/linux/bin/
-    - name: Build Flatpak bundle
-      run: |
-        cd dist/linux/
-        ls -la
-        pwd
-        flatpak-builder build --force-clean ./io.github.fgsfdsfgs.perfect_dark.yml
-        flatpak build-export export build
-        flatpak build-bundle export io.github.fgsfdsfgs.perfect_dark.flatpak io.github.fgsfdsfgs.perfect_dark
+
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: io.github.fgsfdsfgs.perfect_dark.flatpak
+        manifest-path: dist/linux/io.github.fgsfdsfgs.perfect_dark.yaml
+        cache-key: flatpak-builder-${{ github.sha }}
+        upload-artifact: true
+
+    # - name: Build Flatpak bundle
+    #   run: |
+    #     cd dist/linux/
+    #     flatpak-builder build --force-clean io.github.fgsfdsfgs.perfect_dark.yaml
+    #     flatpak build-export export build
+    #     flatpak build-bundle export io.github.fgsfdsfgs.perfect_dark.flatpak io.github.fgsfdsfgs.perfect_dark
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
