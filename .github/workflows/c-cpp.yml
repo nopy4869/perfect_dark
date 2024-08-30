@@ -133,7 +133,7 @@ jobs:
           pushd ci-artifacts
           tar czf ../ci-release/pd-i686-linux.tar.gz pd-i686-linux
           zip -r ../ci-release/pd-i686-windows.zip pd-i686-windows
-          mv io.github.fgsfdsfgs.perfect_dark.flatpak ../ci-release/
+          mv io.github.fgsfdsfgs.perfect_dark.flatpak/io.github.fgsfdsfgs.perfect_dark.flatpak ../ci-release/
           popd
           git tag --force ci-dev-build port
           git push --force origin ci-dev-build
