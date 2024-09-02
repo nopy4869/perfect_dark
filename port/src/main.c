@@ -112,7 +112,8 @@ int main(int argc, const char **argv)
 	audioInit();
 	romdataInit();
 	netInit();
-	gbcRomCheck();
+
+	g_ValidGbcRomFound = romdataCheckGbcRom();
 
 	gameInit();
 

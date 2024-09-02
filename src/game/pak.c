@@ -330,7 +330,7 @@ bool var80075d14 = true;
 #endif
 
 #ifndef PLATFORM_N64
-bool g_validGbcRomFound = false;
+bool g_ValidGbcRomFound = false;
 #endif
 
 u32 pakGetBlockSize(s8 device)
@@ -5997,7 +5997,7 @@ bool gbpakIsAnyPerfectDark(void)
 
 	return false;
 #else
-	return g_validGbcRomFound;
+	return g_ValidGbcRomFound;
 #endif
 }
 
