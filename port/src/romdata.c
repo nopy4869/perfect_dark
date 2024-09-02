@@ -11,6 +11,9 @@
 #include "system.h"
 #include "preprocess.h"
 #include "platform.h"
+#ifndef PLATFORM_N64
+#include "bss.h"
+#endif
 
 /**
  * asset files and ROM segments can be replaced by optional external files,
@@ -50,6 +53,9 @@
 #endif
 
 #define ROMDATA_MAX_FILES 2048
+
+#define GBC_ROM_NAME "pd.gbc"
+#define GBC_ROM_SIZE 4194304
 
 u8 *g_RomFile;
 u32 g_RomFileSize;
@@ -384,6 +390,45 @@ s32 romdataInit(void)
 	sysLogPrintf(LOG_NOTE, "romdataInit: loaded rom, size = %u", g_RomFileSize);
 
 	return 0;
+}
+
+void gbcRomCheck(void)
+{
+	u32 gbcRomSize;
+	u8* gbcRomFile = fsFileLoad(GBC_ROM_NAME, &gbcRomSize);
+
+	if (!gbcRomFile) {
+		return;
+	}
+
+	if (gbcRomSize != GBC_ROM_SIZE) {
+		free(gbcRomFile);
+		return;
+	}
+
+	// ROM title
+
+	if (memcmp(gbcRomFile + 0x134, "PerfDark   VPDE", 15) != 0) {
+		free(gbcRomFile);
+		return;
+	}
+
+	// Licensee code
+
+	if (memcmp(gbcRomFile + 0x144, "4Y", 2) != 0) {
+		free(gbcRomFile);
+		return;
+	}
+
+	// Header and global checksums
+
+	if (gbcRomFile[0x14D] != 0xA1 || gbcRomFile[0x14E] != 0xAD || gbcRomFile[0x14F] != 0x0F) {
+		free(gbcRomFile);
+		return;
+	}
+
+	g_validGbcRomFound = true;
+	free(gbcRomFile);
 }
 
 s32 romdataFileGetSize(s32 fileNum)
