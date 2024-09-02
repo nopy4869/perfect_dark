@@ -11,9 +11,6 @@
 #include "system.h"
 #include "preprocess.h"
 #include "platform.h"
-#ifndef PLATFORM_N64
-#include "bss.h"
-#endif
 
 /**
  * asset files and ROM segments can be replaced by optional external files,
@@ -392,43 +389,51 @@ s32 romdataInit(void)
 	return 0;
 }
 
-void gbcRomCheck(void)
+static inline bool romdataCheckGbcRomContents(const u8 *gbcRomFile, const u32 gbcRomSize)
 {
-	u32 gbcRomSize;
-	u8* gbcRomFile = fsFileLoad(GBC_ROM_NAME, &gbcRomSize);
-
-	if (!gbcRomFile) {
-		return;
-	}
-
 	if (gbcRomSize != GBC_ROM_SIZE) {
-		free(gbcRomFile);
-		return;
+		return false;
 	}
 
 	// ROM title
-
 	if (memcmp(gbcRomFile + 0x134, "PerfDark   VPDE", 15) != 0) {
-		free(gbcRomFile);
-		return;
+		return false;
 	}
 
 	// Licensee code
-
 	if (memcmp(gbcRomFile + 0x144, "4Y", 2) != 0) {
-		free(gbcRomFile);
-		return;
+		return false;
 	}
 
 	// Header and global checksums
-
 	if (gbcRomFile[0x14D] != 0xA1 || gbcRomFile[0x14E] != 0xAD || gbcRomFile[0x14F] != 0x0F) {
-		free(gbcRomFile);
-		return;
+		return false;
 	}
 
-	g_validGbcRomFound = true;
-	free(gbcRomFile);
+	return true;
+}
+
+s32 romdataCheckGbcRom(void)
+{
+	if (fsFileSize(GBC_ROM_NAME) < 0) {
+		// bail early if it doesn't exist to avoid generating error messages
+		return false;
+	}
+
+	u32 gbcRomSize = 0;
+	u8 *gbcRomFile = fsFileLoad(GBC_ROM_NAME, &gbcRomSize);
+	if (!gbcRomFile) {
+		return false;
+	}
+
+	const bool ret = romdataCheckGbcRomContents(gbcRomFile, gbcRomSize);
+	sysMemFree(gbcRomFile);
+
+	if (ret) {
+		sysLogPrintf(LOG_NOTE, "romdataCheckGbcRom: valid GBC rom found");
+	}
+
+	return ret;
 }
 
 s32 romdataFileGetSize(s32 fileNum)

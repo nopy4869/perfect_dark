@@ -137,5 +137,6 @@ It might be possible to build a 32-bit ARM executable, but this has not been tes
 * [Ship of Harkinian team](https://github.com/Kenix3/libultraship/tree/main/src/graphic/Fast3D), Emill and MaikelChan for the libultraship version of fast3d that this port uses;
 * lieff for [minimp3](https://github.com/lieff/minimp3);
 * Mouse Injector and 1964GEPD authors for some of the 60FPS- and mouselook-related fixes;
+* NicNamSam for the icon;
 * everyone who has submitted pull requests and issues to this repository and tested the port;
 * probably more I'm forgetting.
