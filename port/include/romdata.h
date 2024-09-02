@@ -22,6 +22,6 @@ u8 *romdataSegGetData(const char *segName);
 u8 *romdataSegGetDataEnd(const char *segName);
 u32 romdataSegGetSize(const char *segName);
 
-void gbcRomCheck(void);
+s32 romdataCheckGbcRom(void);
 
 #endif
