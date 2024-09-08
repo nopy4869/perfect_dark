@@ -327,7 +327,7 @@ $(B_DIR)/%.o: %.cpp $(JSON_HEADERS)
 	$(CXX) -c $(CXXFLAGS) $(OPT_LVL) -o $@ $<
 
 dist/windows/%.rc:
-	tools/mkresource.sh $(VERSION_HASH) $(VERSION_BRANCH) $(BIN_NAME)
+	tools/mkresource.sh $(VERSION_HASH) $(VERSION_BRANCH) $(ROMID) $(BIN_NAME)
 
 $(B_DIR)/%.res: dist/windows/%.rc
 	windres $< -O coff -o $@
