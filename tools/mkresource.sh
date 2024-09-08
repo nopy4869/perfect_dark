@@ -13,7 +13,7 @@ BEGIN
       VALUE "FileVersion", "$1"
       VALUE "InternalName", "perfectDark-Win32-$2-$1"
       VALUE "LegalCopyright", "(C) 2022 Ryan Dwyer, (C) 2023 fgsfdsfgs"
-      VALUE "OriginalFilename", "pd.exe"
+      VALUE "OriginalFilename", "$3"
       VALUE "ProductName", "Perfect Dark Win32"
       VALUE "ProductVersion", "$2-$1"
     END
