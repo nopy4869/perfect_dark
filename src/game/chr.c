@@ -4657,6 +4657,8 @@ void chrHit(struct shotdata *shotdata, struct hit *hit)
 
 		shield = chrGetShield(chr);
 
+		g_Decapitate = false;
+
 		func0f0341dc(chr, gsetGetDamage(&shotdata->gset), &shotdata->gundir3d, &shotdata->gset,
 				g_Vars.currentplayer->prop, hit->hitpart, hit->prop, hit->bboxnode,
 				hit->model, hit->hitthing.unk28 / 2, sp90);
@@ -4794,11 +4796,16 @@ void chrHit(struct shotdata *shotdata, struct hit *hit)
 						darker = false;
 					}
 
-					if (!chrIsUsingPaintball(g_Vars.currentplayer->prop->chr)) {
+					if (!g_Decapitate && !chrIsUsingPaintball(g_Vars.currentplayer->prop->chr)) {
 						chrBruise(hit->model, hit->hitpart, hit->bboxnode, &sp5c);
 					}
 
 					splatsCreateForChrHit(prop, shotdata, &sp98, &hitpos, darker, 0, g_Vars.currentplayer->prop->chr);
+				}
+
+				if (g_Decapitate) {
+					chrDecapitate(chr);
+					sparksCreate(prop->rooms[0], prop, &hitpos, &shotdata->gunpos3d, 0, SPARKTYPE_HEADEXP_BLOOD);
 				}
 #else
 				// NTSC beta wraps all the blood logic in this paintball check.

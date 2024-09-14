@@ -1,5 +1,9 @@
 # Perfect Dark port (`port-net`)
 
+## Exploding Heads
+![Exploding heads](explodingheads.png)
+Shoot characters in the head to have it explode.
+
 ## Experimental netplay branch
 
 This branch of the port contains an **extremely** early and experimental implementation of network play.  

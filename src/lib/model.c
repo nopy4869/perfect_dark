@@ -1285,6 +1285,9 @@ void modelApplyHeadRelations(struct model *model, struct modelnode *bodynode)
 			headnode = headnode->next;
 		}
 	}
+	else {
+		bodynode->child = NULL;
+	}
 }
 
 void modelApplyReorderRelationsByArg(struct modelnode *basenode, bool reverse)
@@ -3838,6 +3841,9 @@ s32 modelTestForHit(struct model *model, struct coord *arg1, struct coord *arg2,
 					loopnode = loopnode->next;
 				}
 			}
+			else {
+				node->child = NULL;
+			}
 			break;
 		case MODELNODETYPE_CHRINFO:
 		case MODELNODETYPE_DL:
@@ -4133,6 +4139,7 @@ void modelInitRwData(struct model *model, struct modelnode *startnode)
 			rwdata = modelGetNodeRwData(model, node);
 			rwdata->headspot.headmodeldef = NULL;
 			rwdata->headspot.rwdatas = NULL;
+			node->child = NULL;
 			break;
 		case MODELNODETYPE_REORDER:
 			rwdata = modelGetNodeRwData(model, node);
